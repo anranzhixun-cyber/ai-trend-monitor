@@ -51,11 +51,29 @@ def get_cold_ai():
     )
 
 
-def truncate(text, n=60):
+def truncate(text, n=120):
     if not text:
-        return '无描述'
+        return ''
     text = text.replace('\n', ' ').strip()
     return text[:n] + '…' if len(text) > n else text
+
+
+def translate_to_zh(text):
+    """Translate English text to Chinese via free Google Translate endpoint."""
+    if not text:
+        return ''
+    try:
+        r = requests.get(
+            'https://translate.googleapis.com/translate_a/single',
+            params={'client': 'gtx', 'sl': 'en', 'tl': 'zh-CN', 'dt': 't', 'q': text},
+            timeout=10
+        )
+        result = r.json()
+        zh = ''.join(part[0] for part in result[0] if part[0])
+        return zh.strip() if zh else text
+    except Exception as e:
+        print(f'  [translate fail: {e}]', file=sys.stderr)
+        return text
 
 
 def build_message(hot, cold):
@@ -67,19 +85,23 @@ def build_message(hot, cold):
         ''
     ]
     for i, repo in enumerate(hot, 1):
+        desc = truncate(repo.get('description'))
+        zh = translate_to_zh(desc) if desc else '无描述'
         lines.append(
             f'{i}. **[{repo["full_name"]}]({repo["html_url"]})** '
             f'⭐{repo["stargazers_count"]} · {repo.get("language") or "-"}'
         )
-        lines.append(f'   > {truncate(repo.get("description"))}')
+        lines.append(f'   > {zh}')
 
     lines.extend(['', '### 🧊 冷门潜力股', ''])
     for i, repo in enumerate(cold[:3], 1):
+        desc = truncate(repo.get('description'))
+        zh = translate_to_zh(desc) if desc else '无描述'
         lines.append(
             f'{i}. **[{repo["full_name"]}]({repo["html_url"]})** '
             f'⭐{repo["stargazers_count"]} · {repo.get("language") or "-"}'
         )
-        lines.append(f'   > {truncate(repo.get("description"))}')
+        lines.append(f'   > {zh}')
 
     return '\n'.join(lines)
 
