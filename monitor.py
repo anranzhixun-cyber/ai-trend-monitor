@@ -59,18 +59,20 @@ def truncate(text, n=120):
 
 
 def translate_to_zh(text):
-    """Translate English text to Chinese via free Google Translate endpoint."""
+    """Translate English text to Chinese via MyMemory free API (no key needed)."""
     if not text:
         return ''
     try:
         r = requests.get(
-            'https://translate.googleapis.com/translate_a/single',
-            params={'client': 'gtx', 'sl': 'en', 'tl': 'zh-CN', 'dt': 't', 'q': text},
+            'https://api.mymemory.translated.net/get',
+            params={'q': text, 'langpair': 'en|zh-CN'},
             timeout=10
         )
-        result = r.json()
-        zh = ''.join(part[0] for part in result[0] if part[0])
-        return zh.strip() if zh else text
+        data = r.json()
+        translated = data.get('responseData', {}).get('translatedText', '')
+        if translated and 'MYMEMORY WARNING' not in translated.upper():
+            return translated.strip()
+        return text
     except Exception as e:
         print(f'  [translate fail: {e}]', file=sys.stderr)
         return text
